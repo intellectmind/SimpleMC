@@ -1,0 +1,57 @@
+# management-server配置
+minecraft:
+  host: localhost        # management-server-host
+  port: 21111            # management-server-port
+  token: QGtVHQ5CxPsKCp9PgYYM33vHZcGp7yB90wZmRnOj  # management-server-secret
+
+# 代理服务器配置
+proxy:
+  port: 8765             # WebSocket 代理端口
+
+# Web 管理界面配置
+web:
+  port: 8081             # Web 管理界面端口
+  username: "admin"      # 登录用户名
+  password: "Admin123!"   # 登录密码
+  session_timeout: 3600  # 会话超时时间（秒）
+  max_login_attempts: 5  # 最大登录尝试次数
+  login_lockout_time: 300 # 登录锁定时间（秒）
+
+# 安全配置
+security:
+  
+  # 允许的源（CORS）
+  allowed_origins:
+    - "http://localhost:8081"
+    - "http://127.0.0.1:8081"
+    - "http://192.168.1.100:8081"
+  # - "*"  # 允许所有来源（不推荐生产环境使用）
+  
+  # 频率限制
+  rate_limit_requests: 100  # 每分钟最大请求数
+  rate_limit_window: 60     # 频率限制窗口（秒）
+
+  # 是否启用IP白名单验证
+  ip_whitelist_enabled: false
+
+  # IP白名单（允许访问的IP地址）
+  allowed_ips:
+    - "192.168.1.100"
+    - "192.168.1.101"
+  
+  # 网络白名单（允许访问的网络段）
+  allowed_networks:
+    - "192.168.1.0/24"
+    - "10.0.0.0/8"
+
+# RCON 配置
+rcon:
+  enabled: true          # 是否启用 RCON
+  host: "localhost"       # RCON 主机地址
+  port: 25575             # RCON 端口
+  password: "56s4GDS132ds4g16asgEGASD"  # RCON 密码
+
+# 服务器管理配置
+server:
+  startup_script: "start.bat"  # 启动脚本文件名
+  working_directory: "D:/桌面/1.21.9"    # 服务器工作目录

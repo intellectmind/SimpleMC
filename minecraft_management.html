@@ -1,0 +1,2960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data:;">
+    <title>SimpleMC--我的世界服务器管理面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --gray: #95a5a6;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* 登录界面样式 */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-card h1 {
+            color: var(--dark);
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .login-error {
+            color: var(--danger);
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* 主界面样式 - 隐藏直到登录 */
+        .main-interface {
+            display: none;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: var(--dark);
+            font-size: 2.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1::before {
+            content: "🎮";
+            font-size: 2.2rem;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status.disconnected {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .status.disconnected::before { background: #c62828; }
+
+        .status.connected {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status.connected::before { background: #2e7d32; }
+
+        .status.connecting {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+        .status.connecting::before { background: #ef6c00; }
+
+        .connection-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto auto;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-info {
+            background: var(--info);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 10px 18px;
+            font-size: 12px;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .card h2 {
+            color: var(--dark);
+            font-size: 1.4rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        /* 管理卡片容器样式 - 限制高度并添加滚动条 */
+        .management-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .management-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .management-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .management-container::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .management-container::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* 搜索栏样式 */
+        .search-container {
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* 控制台日志 */
+        .log-container {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .log-entry.info { color: #4fc3f7; }
+        .log-entry.success { color: #66bb6a; }
+        .log-entry.error { color: #ef5350; }
+        .log-entry.warning { color: #ffb74d; }
+
+        .command-input {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .command-input input {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 14px;
+            background: white;
+        }
+
+        /* 紧凑的玩家项样式 */
+        .compact-player-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 3px solid var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .compact-player-item:hover {
+            transform: translateX(3px);
+            background: #e9ecef;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .compact-player-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .compact-player-name {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 2px;
+        }
+
+        .compact-player-uuid {
+            color: var(--gray);
+            font-size: 0.7rem;
+            font-family: 'Consolas', monospace;
+        }
+
+        .compact-player-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* 游戏规则开关样式 */
+        .gamerule-item {
+            background: #f8f9fa;
+            padding: 18px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary);
+        }
+
+        .gamerule-item:hover {
+            transform: translateX(3px);
+            background: #e9ecef;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .gamerule-info {
+            flex: 1;
+        }
+
+        .gamerule-name {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 4px;
+            font-size: 1rem;
+        }
+
+        .gamerule-description {
+            color: var(--gray);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .gamerule-type {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--info);
+            color: white;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+
+        .gamerule-type.boolean { background: var(--success); }
+        .gamerule-type.number { background: var(--info); }
+        .gamerule-type.string { background: var(--warning); }
+
+        .gamerule-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* 开关按钮样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--success);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        input:disabled + .slider {
+            background-color: #e0e0e0;
+            cursor: not-allowed;
+        }
+
+        input:disabled + .slider:before {
+            background-color: #f5f5f5;
+        }
+
+        /* 数字输入样式 */
+        .number-input {
+            width: 120px;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .number-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* 文本输入样式 */
+        .text-input {
+            width: 200px;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* 规则值显示 */
+        .gamerule-value {
+            font-family: 'Consolas', monospace;
+            background: var(--light);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .gamerule-value.true { background: #e8f5e9; color: var(--success); }
+        .gamerule-value.false { background: #ffebee; color: var(--danger); }
+        .gamerule-value.number { background: #e3f2fd; color: var(--info); }
+        .gamerule-value.string { background: #fff3e0; color: var(--warning); }
+
+        /* 操作按钮 */
+        .gamerule-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .gamerule-btn.apply {
+            background: var(--success);
+            color: white;
+        }
+
+        .gamerule-btn.apply:hover:not(:disabled) {
+            background: #229954;
+            transform: translateY(-1px);
+        }
+
+        .gamerule-btn.reset {
+            background: var(--gray);
+            color: white;
+        }
+
+        .gamerule-btn.reset:hover:not(:disabled) {
+            background: #7f8c8d;
+            transform: translateY(-1px);
+        }
+
+        .gamerule-btn.toggle {
+            background: var(--success);
+            color: white;
+            min-width: 60px;
+        }
+
+        .gamerule-btn.toggle.off {
+            background: var(--danger);
+        }
+
+        .gamerule-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* 规则分组 */
+        .gamerule-category {
+            margin-bottom: 25px;
+        }
+
+        .gamerule-category h3 {
+            color: var(--dark);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+            font-size: 1.2rem;
+        }
+
+        /* 搜索和筛选 */
+        .gamerule-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .filter-select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            background: white;
+            min-width: 150px;
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* 全宽卡片 */
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* 事件容器 */
+        .events-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            background: white;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            border-left: 4px solid var(--info);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .event-time {
+            color: var(--gray);
+            font-size: 11px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .event-type {
+            font-weight: 600;
+            color: var(--info);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .event-data {
+            color: var(--dark);
+            font-size: 12px;
+            font-family: 'Consolas', monospace;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        /* 表单组 */
+        .form-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-group input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+        }
+
+        /* 标签页样式 */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray);
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 白名单状态指示器 */
+        .whitelist-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-indicator.on {
+            background: var(--success);
+        }
+
+        .status-indicator.off {
+            background: var(--danger);
+        }
+
+        /* RCON 状态指示器 */
+        .rcon-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .rcon-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .rcon-indicator.on {
+            background: var(--success);
+        }
+
+        .rcon-indicator.off {
+            background: var(--danger);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1400px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header-top {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            
+            .connection-panel {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .connection-status {
+                justify-content: flex-start;
+            }
+            
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .form-group {
+                flex-direction: column;
+            }
+            
+            .form-group input {
+                min-width: 100%;
+            }
+
+            .gamerule-filters {
+                flex-direction: column;
+            }
+
+            .gamerule-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .gamerule-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            color: var(--gray);
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 服务器状态指示器 */
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .server-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .server-indicator.on {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .server-indicator.off {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div class="login-container" id="loginContainer">
+        <div class="login-card">
+            <h1>🔐 管理员登录</h1>
+            <input type="text" class="login-input" id="loginUsername" placeholder="用户名">
+            <input type="password" class="login-input" id="loginPassword" placeholder="密码">
+            <button class="login-btn" onclick="login()">登录</button>
+            <div class="login-error" id="loginError">用户名或密码错误</div>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div class="main-interface" id="mainInterface">
+        <div class="container">
+            <div class="header">
+                <div class="header-top">
+                    <h1>SimpleMC 我的世界服务器管理面板</h1>
+                    <div class="connection-status">
+                        <span class="status disconnected" id="statusIndicator">
+                            <span class="status-text">未连接</span>
+                        </span>
+                        <button class="btn btn-warning btn-small" onclick="logout()">🚪 退出登录</button>
+                    </div>
+                </div>
+                
+                <div class="connection-panel">
+                    <div class="input-group">
+                        <label>🖥️ 代理服务器地址</label>
+                        <input type="text" id="wsHost" value="" placeholder="例如: localhost 或 127.0.0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>🔌 代理服务器端口</label>
+                        <input type="number" id="wsPort" value="" placeholder="默认: 8765">
+                    </div>
+                    <button class="btn btn-primary" onclick="connect()" id="connectBtn">
+                        <span>🔗 连接服务器</span>
+                    </button>
+                    <button class="btn btn-danger" onclick="disconnect()" id="disconnectBtn" disabled>
+                        <span>❌ 断开连接</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <!-- 控制台日志 -->
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h2>📝 服务器控制台</h2>
+                        <div class="rcon-status">
+                            <span class="rcon-indicator off" id="rconStatusIndicator"></span>
+                            <span id="rconStatusText">RCON 状态: 检测中...</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-info btn-small" onclick="clearLogs()">🗑️ 清空日志</button>
+                        </div>
+                    </div>
+
+                    <div class="server-status">
+                        <span class="server-indicator off" id="serverStatusIndicator"></span>
+                        <span id="serverStatusText">服务器状态: 检测中...</span>
+                        <div style="margin-left: auto; display: flex; gap: 10px;">
+                            <button class="btn btn-primary btn-small" onclick="startServer()" id="startServerBtn">🚀 启动服务器</button>
+                            <button class="btn btn-success btn-small" onclick="saveAll()">💾 保存世界</button>
+                            <button class="btn btn-danger btn-small" onclick="stopServer()" id="normalStopBtn">🛑 停止服务器</button>
+                            <button class="btn btn-danger btn-small" onclick="forceStopServer()" id="forceStopBtn">🛑 强制停止</button>
+                        </div>
+                    </div>
+                    <div class="log-container" id="logContainer"></div>
+                    <div class="command-input">
+                        <input type="text" id="commandInput" placeholder="输入 Minecraft 服务器命令 (如: time set day, give player diamond...)..." onkeypress="handleCommandKeypress(event)">
+                        <button class="btn btn-success" onclick="executeRconCommand()">🚀 执行命令</button>
+                    </div>
+                </div>
+
+                <!-- 两列布局 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>👥 在线玩家</h2>
+                        <div class="card-actions">
+                            <button class="btn btn-primary btn-small" onclick="getPlayers()">🔄 刷新列表</button>
+                        </div>
+                    </div>
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="playersSearch" placeholder="🔍 搜索玩家..." oninput="filterPlayers()">
+                    </div>
+                    <div class="management-container">
+                        <ul class="players-list" id="playersList">
+                            <li class="empty-state">点击刷新按钮获取在线玩家列表</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>⚡ 服务器事件</h2>
+                        <div class="card-actions">
+                            <button class="btn btn-info btn-small" onclick="clearEvents()">🗑️ 清空事件</button>
+                        </div>
+                    </div>
+                    <div class="management-container">
+                        <div id="eventsContainer">
+                            <div class="empty-state">服务器事件将在这里显示</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 管理功能标签页 -->
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h2>🛡️ 服务器管理</h2>
+                    </div>
+                    
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab('whitelist')">✅ 白名单</button>
+                        <button class="tab" onclick="switchTab('bans')">🚫 封禁管理</button>
+                        <button class="tab" onclick="switchTab('admins')">👑 管理员</button>
+                        <button class="tab" onclick="switchTab('gamerules')">⚙️ 游戏规则</button>
+                    </div>
+
+                    <!-- 白名单管理 -->
+                    <div class="tab-content active" id="whitelist-tab">
+                        <div class="whitelist-status">
+                            <span class="status-indicator off" id="whitelistStatusIndicator"></span>
+                            <span id="whitelistStatusText">正在获取白名单状态...</span>
+                            <div style="margin-left: auto; display: flex; gap: 10px;">
+                                <button class="btn btn-success btn-small" onclick="toggleWhitelist(true)" id="enableWhitelistBtn">✅ 启用白名单</button>
+                                <button class="btn btn-danger btn-small" onclick="toggleWhitelist(false)" id="disableWhitelistBtn">❌ 关闭白名单</button>
+                            </div>
+                        </div>
+                        <div class="search-container">
+                            <input type="text" class="search-input" id="whitelistSearch" placeholder="🔍 搜索玩家名称..." oninput="filterWhitelist()">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="addWhitelistPlayer" placeholder="输入玩家名称">
+                            <button class="btn btn-success" onclick="addToWhitelist()">➕ 添加玩家</button>
+                            <button class="btn btn-primary" onclick="getWhitelist()">🔄 刷新列表</button>
+                        </div>
+                        <div class="management-container">
+                            <div id="whitelistContainer">
+                                <div class="empty-state">白名单列表将在这里显示</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 封禁管理 -->
+                    <div class="tab-content" id="bans-tab">
+                        <div class="search-container">
+                            <input type="text" class="search-input" id="bansSearch" placeholder="🔍 搜索玩家名称或IP..." oninput="filterBans()">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="banPlayerName" placeholder="玩家名称">
+                            <input type="text" id="banReason" placeholder="封禁原因">
+                            <button class="btn btn-danger" onclick="banPlayer()">🚫 封禁玩家</button>
+                            <button class="btn btn-warning" onclick="getBans()">🔄 刷新玩家封禁</button>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="banIP" placeholder="IP地址">
+                            <input type="text" id="banIPReason" placeholder="封禁原因">
+                            <button class="btn btn-danger" onclick="banIP()">🌐 封禁 IP</button>
+                            <button class="btn btn-warning" onclick="getIPBans()">🔄 刷新 IP 封禁</button>
+                        </div>
+                        <div class="management-container">
+                            <div id="bansContainer">
+                                <div class="empty-state">封禁列表将在这里显示</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 管理员管理 -->
+                    <div class="tab-content" id="admins-tab">
+                        <div class="search-container">
+                            <input type="text" class="search-input" id="adminsSearch" placeholder="🔍 搜索管理员..." oninput="filterAdmins()">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="addAdminPlayer" placeholder="玩家名称">
+                            <input type="number" id="adminLevel" placeholder="权限等级 (0-4)" min="0" max="4" value="4">
+                            <button class="btn btn-success" onclick="addAdmin()">➕ 添加管理员</button>
+                            <button class="btn btn-primary" onclick="getAdmins()">🔄 刷新列表</button>
+                        </div>
+                        <div class="management-container">
+                            <div id="adminsContainer">
+                                <div class="empty-state">管理员列表将在这里显示</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 游戏规则管理 -->
+                    <div class="tab-content" id="gamerules-tab">
+                        <div class="gamerule-filters">
+                            <input type="text" class="filter-input" id="ruleSearch" placeholder="🔍 搜索游戏规则..." onkeyup="filterRules()">
+                            <select class="filter-select" id="ruleCategoryFilter" onchange="filterRules()">
+                                <option value="all">所有分类</option>
+                                <option value="gameplay">游戏玩法</option>
+                                <option value="world">世界设置</option>
+                                <option value="player">玩家相关</option>
+                                <option value="mob">生物相关</option>
+                                <option value="chat">聊天相关</option>
+                            </select>
+                        </div>
+                        <div class="management-container">
+                            <div id="gameRulesList">
+                                <div class="empty-state">点击加载按钮获取游戏规则</div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 20px;">
+                            <button class="btn btn-primary" onclick="getGameRules()">🔄 加载规则</button>
+                            <button class="btn btn-info" onclick="resetAllRules()">🔄 重置所有</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 安全验证
+        class SecurityUtils {
+            static validateCommand(command) {
+                if (!command || command.length > 1000) {
+                    return false;
+                }
+                
+                // 禁止的危险命令
+                const dangerousCommands = [
+                    'sudo', 'rm -rf', 'del /f', 'format', 'mkfs', 'dd if=',
+                    'shutdown', 'reboot', 'init', 'chmod 777', 'passwd'
+                ];
+                
+                const commandLower = command.toLowerCase();
+                for (const dangerous of dangerousCommands) {
+                    if (commandLower.includes(dangerous)) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            static sanitizeInput(input) {
+                if (!input) return '';
+                
+                const replacements = {
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#x27;',
+                    '&': '&amp;',
+                    '/': '&#x2F;',
+                    '`': '&#x60;',
+                    '=': '&#x3D;'
+                };
+                
+                return input.replace(/[<>&"'`=/]/g, char => replacements[char] || char);
+            }
+            
+            static validateUsername(username) {
+                if (!username || username.length > 50) {
+                    return false;
+                }
+                return /^[a-zA-Z0-9_-]+$/.test(username);
+            }
+        }
+
+        // 全局变量
+        let ws = null;
+        let sessionId = null;
+        let requestId = 1;
+        let pendingRequests = {};
+        let isConnected = false;
+        let whitelistEnabled = false;
+        let rconEnabled = false;
+        let serverRunning = false;
+        let serverOutputWs = null;
+        let statusPollInterval = null;
+
+        // 游戏规则分类映射
+        const ruleCategories = {
+            'announceAdvancements': 'chat',
+            'commandBlockOutput': 'chat',
+            'disableElytraMovementCheck': 'player',
+            'disableRaids': 'mob',
+            'doDaylightCycle': 'gameplay',
+            'doEntityDrops': 'gameplay',
+            'doFireTick': 'gameplay',
+            'doImmediateRespawn': 'player',
+            'doInsomnia': 'mob',
+            'doLimitedCrafting': 'gameplay',
+            'doMobLoot': 'mob',
+            'doMobSpawning': 'mob',
+            'doPatrolSpawning': 'mob',
+            'doTileDrops': 'gameplay',
+            'doTraderSpawning': 'mob',
+            'doWeatherCycle': 'gameplay',
+            'drowningDamage': 'player',
+            'fallDamage': 'player',
+            'fireDamage': 'player',
+            'forgiveDeadPlayers': 'mob',
+            'freezeDamage': 'player',
+            'keepInventory': 'player',
+            'logAdminCommands': 'chat',
+            'maxCommandChainLength': 'world',
+            'maxEntityCramming': 'world',
+            'mobGriefing': 'gameplay',
+            'naturalRegeneration': 'player',
+            'playersSleepingPercentage': 'player',
+            'randomTickSpeed': 'world',
+            'reducedDebugInfo': 'player',
+            'sendCommandFeedback': 'chat',
+            'showDeathMessages': 'player',
+            'spawnRadius': 'player',
+            'spectatorsGenerateChunks': 'world',
+            'universalAnger': 'mob',
+            'allowEnteringNetherUsingPortals': 'gameplay',
+            'allowFireTicksAwayFromPlayer': 'gameplay',
+            'blockExplosionDropDecay': 'gameplay',
+            'commandBlocksEnabled': 'gameplay',
+            'commandModificationBlockLimit': 'world',
+            'disablePlayerMovementCheck': 'player',
+            'doVinesSpread': 'world',
+            'doWardenSpawning': 'mob',
+            'enderPearlsVanishOnDeath': 'player',
+            'globalSoundEvents': 'gameplay',
+            'lavaSourceConversion': 'world',
+            'locatorBar': 'player',
+            'maxCommandForkCount': 'world',
+            'mobExplosionDropDecay': 'gameplay',
+            'playersNetherPortalCreativeDelay': 'player',
+            'playersNetherPortalDefaultDelay': 'player',
+            'projectilesCanBreakBlocks': 'gameplay',
+            'pvp': 'player',
+            'snowAccumulationHeight': 'world',
+            'spawnMonsters': 'mob',
+            'spawnerBlocksEnabled': 'gameplay',
+            'tntExplodes': 'gameplay',
+            'tntExplosionDropDecay': 'gameplay',
+            'waterSourceConversion': 'world'
+        };
+
+        // 规则描述
+        const ruleDescriptions = {
+            'announceAdvancements': '是否在聊天栏中公告玩家获得的进度',
+            'commandBlockOutput': '命令方块执行命令时是否在聊天栏显示',
+            'disableElytraMovementCheck': '是否禁用鞘翅移动检查（可用于反作弊）',
+            'disableRaids': '是否禁用袭击事件',
+            'doDaylightCycle': '是否进行昼夜交替',
+            'doEntityDrops': '实体死亡时是否掉落物品',
+            'doFireTick': '火是否会蔓延和自然熄灭',
+            'doImmediateRespawn': '死亡后是否立即重生（跳过死亡界面）',
+            'doInsomnia': '是否生成幻翼（失眠机制）',
+            'doLimitedCrafting': '玩家是否只能合成已解锁的配方',
+            'doMobLoot': '生物死亡时是否掉落战利品',
+            'doMobSpawning': '是否自然生成生物',
+            'doPatrolSpawning': '是否生成灾厄巡逻队',
+            'doTileDrops': '破坏方块时是否掉落物品',
+            'doTraderSpawning': '是否生成流浪商人',
+            'doWeatherCycle': '是否进行天气变化',
+            'drowningDamage': '玩家是否会受到溺水伤害',
+            'fallDamage': '玩家是否会受到摔落伤害',
+            'fireDamage': '玩家是否会受到火焰伤害',
+            'forgiveDeadPlayers': '中立生物在目标玩家死亡后是否停止愤怒',
+            'freezeDamage': '玩家在粉末雪中是否会受到冰冻伤害',
+            'keepInventory': '死亡后是否保留物品栏和经验',
+            'logAdminCommands': '是否在服务器日志中记录管理员执行的命令',
+            'maxCommandChainLength': '命令方块链执行的最大长度',
+            'maxEntityCramming': '实体挤压伤害阈值（同位置最多实体数）',
+            'mobGriefing': '生物是否会破坏地形和捡起物品',
+            'naturalRegeneration': '玩家饥饿值满时是否自然回复生命值',
+            'playersSleepingPercentage': '跳过夜晚所需的入睡玩家百分比',
+            'randomTickSpeed': '随机刻速度（影响作物生长、树叶腐烂等）',
+            'reducedDebugInfo': '是否减少F3调试屏幕显示的信息',
+            'sendCommandFeedback': '是否显示命令执行反馈',
+            'showDeathMessages': '是否在聊天栏显示玩家死亡信息',
+            'spawnRadius': '玩家死亡后的重生保护半径',
+            'spectatorsGenerateChunks': '观察者模式的玩家是否能够加载区块',
+            'universalAnger': '中立生物是否会对任何玩家愤怒（而不仅是攻击者）',
+            'allowEnteringNetherUsingPortals': '是否允许玩家通过下界传送门进入下界',
+            'allowFireTicksAwayFromPlayer': '是否在玩家远离时继续计算火焰蔓延',
+            'blockExplosionDropDecay': '方块爆炸时是否根据爆炸距离衰减掉落物',
+            'commandBlocksEnabled': '是否启用命令方块',
+            'commandModificationBlockLimit': '命令方块链中单个命令可以修改的最大方块数量',
+            'disablePlayerMovementCheck': '是否禁用玩家移动检查（可用于反作弊）',
+            'doVinesSpread': '藤蔓是否会自然蔓延',
+            'doWardenSpawning': '是否生成监守者',
+            'enderPearlsVanishOnDeath': '玩家死亡时末影珍珠是否会消失',
+            'globalSoundEvents': '是否启用全局声音事件',
+            'lavaSourceConversion': '是否允许岩浆源方块转换（如黑石生成）',
+            'locatorBar': '是否显示定位器地图的进度条',
+            'maxCommandForkCount': '单个命令执行的最大分支数量',
+            'mobExplosionDropDecay': '生物爆炸时是否根据爆炸距离衰减掉落物',
+            'playersNetherPortalCreativeDelay': '创造模式玩家通过下界传送门的冷却时间（刻）',
+            'playersNetherPortalDefaultDelay': '生存模式玩家通过下界传送门的冷却时间（刻）',
+            'projectilesCanBreakBlocks': '抛射物是否可以破坏方块',
+            'pvp': '是否允许玩家之间的战斗（PvP）',
+            'snowAccumulationHeight': '雪层积累的最大高度',
+            'spawnMonsters': '是否自然生成敌对生物',
+            'spawnerBlocksEnabled': '是否启用刷怪笼',
+            'tntExplodes': 'TNT是否会爆炸',
+            'tntExplosionDropDecay': 'TNT爆炸时是否根据爆炸距离衰减掉落物',
+            'waterSourceConversion': '是否允许水源方块转换（如圆石变成苔石）'
+        };
+
+        // 默认值映射
+        const defaultValues = {
+            'announceAdvancements': "true",
+            'commandBlockOutput': "true",
+            'disableElytraMovementCheck': "false",
+            'disableRaids': "false",
+            'doDaylightCycle': "true",
+            'doEntityDrops': "true",
+            'doFireTick': "true",
+            'doImmediateRespawn': "false",
+            'doInsomnia': "true",
+            'doLimitedCrafting': "false",
+            'doMobLoot': "true",
+            'doMobSpawning': "true",
+            'doPatrolSpawning': "true",
+            'doTileDrops': "true",
+            'doTraderSpawning': "true",
+            'doWeatherCycle': "true",
+            'drowningDamage': "true",
+            'fallDamage': "true",
+            'fireDamage': "true",
+            'forgiveDeadPlayers': "true",
+            'freezeDamage': "true",
+            'keepInventory': "false",
+            'logAdminCommands': "true",
+            'maxCommandChainLength': "65536",
+            'maxEntityCramming': "24",
+            'mobGriefing': "true",
+            'naturalRegeneration': "true",
+            'playersSleepingPercentage': "100",
+            'randomTickSpeed': "3",
+            'reducedDebugInfo': "false",
+            'sendCommandFeedback': "true",
+            'showDeathMessages': "true",
+            'spawnRadius': "10",
+            'spectatorsGenerateChunks': "true",
+            'universalAnger': "false",
+            'allowEnteringNetherUsingPortals': "true",
+            'allowFireTicksAwayFromPlayer': "false",
+            'blockExplosionDropDecay': "true",
+            'commandBlocksEnabled': "true",
+            'commandModificationBlockLimit': "32768",
+            'disablePlayerMovementCheck': "false",
+            'doVinesSpread': "true",
+            'doWardenSpawning': "true",
+            'enderPearlsVanishOnDeath': "true",
+            'globalSoundEvents': "true",
+            'lavaSourceConversion': "false",
+            'locatorBar': "true",
+            'maxCommandForkCount': "65536",
+            'mobExplosionDropDecay': "true",
+            'playersNetherPortalCreativeDelay': "0",
+            'playersNetherPortalDefaultDelay': "80",
+            'projectilesCanBreakBlocks': "true",
+            'pvp': "true",
+            'snowAccumulationHeight': "1",
+            'spawnMonsters': "true",
+            'spawnerBlocksEnabled': "true",
+            'tntExplodes': "true",
+            'tntExplosionDropDecay': "false",
+            'waterSourceConversion': "true"
+        };
+
+        let currentRules = [];
+
+        // 登录功能
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            // 输入验证
+            if (!SecurityUtils.validateUsername(username)) {
+                errorDiv.textContent = '用户名格式无效（只允许字母、数字、下划线和连字符）';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (!password || password.length < 8) {
+                errorDiv.textContent = '密码长度至少8位';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        username: SecurityUtils.sanitizeInput(username), 
+                        password: SecurityUtils.sanitizeInput(password) 
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    sessionId = result.session;
+                    // 安全地存储会话ID
+                    localStorage.setItem('mc_session', sessionId);
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('mainInterface').style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    addLog('✅ 登录成功', 'success');
+                    
+                    // 开始状态轮询
+                    startStatusPolling();
+                } else {
+                    errorDiv.textContent = SecurityUtils.sanitizeInput(result.message) || '登录失败';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = '登录请求失败: ' + SecurityUtils.sanitizeInput(error.message);
+                errorDiv.style.display = 'block';
+                console.error('Login error:', error);
+            }
+        }
+
+        // 检查认证状态
+        async function checkAuth() {
+            if (!sessionId) {
+                alert('请先登录');
+                return false;
+            }
+            
+            try {
+                const response = await fetch('/api/check', {
+                    headers: {
+                        'X-Session-ID': sessionId
+                    }
+                });
+                
+                const result = await response.json();
+                return result.success;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                return false;
+            }
+        }
+
+        // 退出登录
+        function logout() {
+            // 调用退出接口
+            if (sessionId) {
+                fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'X-Session-ID': sessionId
+                    }
+                }).catch(console.error);
+            }
+            
+            sessionId = null;
+            // 清除本地存储
+            localStorage.removeItem('mc_session');
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.getElementById('mainInterface').style.display = 'none';
+            
+            // 停止状态轮询
+            stopStatusPolling();
+            
+            if (ws) {
+                disconnect();
+            }
+            addLog('已安全退出登录', 'info');
+        }
+
+        // 开始状态轮询
+        function startStatusPolling() {
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+            }
+            
+            statusPollInterval = setInterval(() => {
+                if (sessionId) {
+                    checkServerStatus();
+                    // 每60秒检查一次RCON状态
+                    if (Date.now() % 60000 < 1000) {
+                        checkRconStatus();
+                    }
+                }
+            }, 10000); // 每40秒检查一次服务器状态
+        }
+
+        // 停止状态轮询
+        function stopStatusPolling() {
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+                statusPollInterval = null;
+            }
+        }
+
+        // 连接服务器输出流
+        function connectServerOutput() {
+            if (serverOutputWs && serverOutputWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+            
+            const host = document.getElementById('wsHost').value;
+            const port = document.getElementById('wsPort').value;
+            
+            try {
+                serverOutputWs = new WebSocket(`ws://${host}:${port}/server_output`);
+                
+                serverOutputWs.onopen = function() {
+                    addLog('✅ 已连接到服务器输出流', 'success');
+                };
+                
+                serverOutputWs.onclose = function() {
+                    addLog('❌ 服务器输出流连接已断开', 'error');
+                };
+                
+                serverOutputWs.onerror = function(error) {
+                    addLog('❌ 服务器输出流连接错误', 'error');
+                    console.error('Server output WebSocket error:', error);
+                };
+                
+                serverOutputWs.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'server_output') {
+                            // 在控制台日志中显示服务器输出
+                            addLog(data.data, 'info');
+                        }
+                    } catch (e) {
+                        console.log('收到非JSON消息:', event.data);
+                    }
+                };
+                
+            } catch (error) {
+                addLog('❌ 连接服务器输出流失败: ' + error.message, 'error');
+                console.error('Server output connection error:', error);
+            }
+        }
+
+        // 连接 WebSocket
+        function connect() {
+            if (!sessionId) {
+                alert('请先登录');
+                return;
+            }
+            
+            const host = document.getElementById('wsHost').value;
+            const port = document.getElementById('wsPort').value;
+            
+            // 验证主机名和端口
+            if (!host || !port) {
+                addLog('❌ 请输入有效的主机名和端口', 'error');
+                return;
+            }
+            
+            updateStatus('connecting', '连接中...');
+            
+            try {
+                ws = new WebSocket(`ws://${SecurityUtils.sanitizeInput(host)}:${SecurityUtils.sanitizeInput(port)}`);
+                
+                ws.onopen = function() {
+                    updateStatus('connected', '已连接');
+                    isConnected = true;
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    addLog('✅ 已连接到 Minecraft 服务器', 'success');
+                    
+                    // 连接服务器输出流
+                    connectServerOutput();
+                    
+                    // 连接成功后获取初始数据
+                    setTimeout(() => {
+                        getPlayers();
+                        getWhitelist();
+                        getWhitelistStatus();
+                        getBans();
+                        getIPBans();
+                        getAdmins();
+                        getGameRules();
+                        checkRconStatus();
+                    }, 1000);
+                    setTimeout(() => {
+                        checkServerStatus();
+                    }, 1500);
+                };
+                
+                ws.onclose = function() {
+                    updateStatus('disconnected', '连接断开');
+                    isConnected = false;
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    addLog('❌ 与服务器的连接已断开', 'error');
+                };
+                
+                ws.onerror = function(error) {
+                    updateStatus('disconnected', '连接错误');
+                    addLog('❌ 连接错误', 'error');
+                    console.error('WebSocket error:', error);
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleServerMessage(data);
+                    } catch (e) {
+                        console.log('收到非JSON消息:', event.data);
+                    }
+                };
+                
+            } catch (error) {
+                updateStatus('disconnected', '连接失败');
+                addLog('❌ 连接失败: ' + SecurityUtils.sanitizeInput(error.message), 'error');
+                console.error('Connection error:', error);
+            }
+        }
+
+        // 断开连接
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            
+            if (serverOutputWs) {
+                serverOutputWs.close();
+                serverOutputWs = null;
+            }
+            
+            updateStatus('disconnected', '未连接');
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            addLog('已断开连接', 'info');
+            
+            // 断开连接时更新 RCON 状态
+            rconEnabled = false;
+            updateRconStatusDisplay();
+        }
+
+        // 更新连接状态
+        function updateStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status ${status}`;
+            indicator.querySelector('.status-text').textContent = text;
+        }
+
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            // 清理输出内容
+            const safeMessage = SecurityUtils.sanitizeInput(message);
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${safeMessage}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 添加事件
+        function addEvent(type, data) {
+            const eventsContainer = document.getElementById('eventsContainer');
+            const eventItem = document.createElement('div');
+            eventItem.className = 'event-item';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            eventItem.innerHTML = `
+                <div class="event-time">${timestamp}</div>
+                <div class="event-type">${type}</div>
+                <div class="event-data">${JSON.stringify(data, null, 2)}</div>
+            `;
+            
+            eventsContainer.appendChild(eventItem);
+            eventsContainer.scrollTop = eventsContainer.scrollHeight;
+            
+            // 限制事件数量
+            const events = eventsContainer.querySelectorAll('.event-item');
+            if (events.length > 50) {
+                events[0].remove();
+            }
+        }
+
+        // 检查 RCON 状态
+        async function checkRconStatus() {
+            try {
+                const response = await fetch('/api/rcon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    },
+                    body: JSON.stringify({ command: 'list' })
+                });
+                
+                const result = await response.json();
+                rconEnabled = result.success;
+                updateRconStatusDisplay();
+                
+            } catch (error) {
+                rconEnabled = false;
+                updateRconStatusDisplay();
+            }
+        }
+
+        // 更新 RCON 状态显示
+        function updateRconStatusDisplay() {
+            const indicator = document.getElementById('rconStatusIndicator');
+            const statusText = document.getElementById('rconStatusText');
+            
+            if (rconEnabled) {
+                indicator.className = 'rcon-indicator on';
+                statusText.textContent = 'RCON 状态: 已连接';
+            } else {
+                indicator.className = 'rcon-indicator off';
+                statusText.textContent = 'RCON 状态: 未连接';
+            }
+        }
+
+        // 执行 RCON 命令
+        async function executeRconCommand() {
+            const commandInput = document.getElementById('commandInput');
+            const command = commandInput.value.trim();
+            
+            if (!command) return;
+            
+            if (!rconEnabled) {
+                addLog('❌ RCON 未启用，无法执行命令', 'error');
+                return;
+            }
+            
+            addLog(`🔄 执行命令: ${command}`, 'info');
+            
+            try {
+                const response = await fetch('/api/rcon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLog(`✅ 命令执行成功: ${result.response}`, 'success');
+                } else {
+                    addLog(`❌ 命令执行失败: ${result.message}`, 'error');
+                }
+                
+                commandInput.value = '';
+            } catch (error) {
+                addLog(`❌ 命令执行错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 处理命令输入框回车键
+        function handleCommandKeypress(event) {
+            if (event.key === 'Enter') {
+                executeRconCommand();
+            }
+        }
+
+        // 发送 RPC 请求（保持原有协议格式）
+        function sendRequest(method, params = []) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('❌ 未连接到服务器', 'error');
+                return Promise.reject(new Error('未连接'));
+            }
+            
+            const id = requestId++;
+            const request = {
+                jsonrpc: "2.0",
+                method: method,
+                params: params,
+                id: id
+            };
+            
+            return new Promise((resolve, reject) => {
+                pendingRequests[id] = { resolve, reject };
+                const jsonStr = JSON.stringify(request);
+                console.log('发送请求:', jsonStr);
+                ws.send(jsonStr);
+                addLog(`发送请求: ${method}`, 'info');
+                
+                // 设置超时
+                setTimeout(() => {
+                    if (pendingRequests[id]) {
+                        delete pendingRequests[id];
+                        reject(new Error('请求超时'));
+                        addLog(`请求超时: ${method}`, 'error');
+                    }
+                }, 10000);
+            });
+        }
+
+        // 处理服务器消息
+        function handleServerMessage(data) {
+            console.log('收到消息:', data);
+            
+            if (data.id && pendingRequests[data.id]) {
+                const { resolve, reject } = pendingRequests[data.id];
+                delete pendingRequests[data.id];
+                
+                if (data.error) {
+                    addLog(`错误 [${data.error.code}]: ${data.error.message}`, 'error');
+                    reject(data.error);
+                } else {
+                    addLog(`收到响应`, 'success');
+                    resolve(data.result);
+                }
+            } else if (data.method) {
+                // 处理服务器推送的事件
+                addEvent(data.method, data.params);
+                addLog(`收到事件: ${data.method}`, 'info');
+                
+                // 处理特定事件
+                switch (data.method) {
+                    case 'minecraft:notification/players/joined':
+                        if (data.params && data.params[0]) {
+                            addLog(`🎮 玩家 ${data.params[0].name} 加入了游戏`, 'success');
+                            getPlayers();
+                        }
+                        break;
+                    case 'minecraft:notification/players/left':
+                        if (data.params && data.params[0]) {
+                            addLog(`🚪 玩家 ${data.params[0].name} 离开了游戏`, 'warning');
+                            getPlayers();
+                        }
+                        break;
+                    case 'minecraft:notification/server/saving':
+                        addLog('💾 服务器正在保存世界...', 'warning');
+                        break;
+                    case 'minecraft:notification/server/saved':
+                        addLog('✅ 世界保存完成', 'success');
+                        break;
+                }
+            }
+        }
+
+        // 获取在线玩家
+        function getPlayers() {
+            sendRequest('players', [])
+                .then(players => {
+                    displayPlayers(players);
+                    addLog(`获取到 ${players.length} 名在线玩家`, 'success');
+                })
+                .catch(error => {
+                    addLog('获取玩家列表失败: ' + error.message, 'error');
+                });
+        }
+
+        // 显示玩家列表 - 使用紧凑样式
+        function displayPlayers(players) {
+            const playersList = document.getElementById('playersList');
+            
+            if (!players || players.length === 0) {
+                playersList.innerHTML = '<li class="empty-state">没有在线玩家</li>';
+                return;
+            }
+            
+            playersList.innerHTML = players.map(player => `
+                <li class="compact-player-item" data-name="${player.name.toLowerCase()}">
+                    <div class="compact-player-info">
+                        <div class="compact-player-name">${player.name}</div>
+                        <div class="compact-player-uuid">${player.id}</div>
+                    </div>
+                    <div class="compact-player-actions">
+                        <button class="btn btn-danger btn-small" onclick="kickPlayer('${player.name}', '${player.id}')">踢出</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        // 筛选玩家
+        function filterPlayers() {
+            const search = document.getElementById('playersSearch').value.toLowerCase();
+            const items = document.querySelectorAll('#playersList .compact-player-item');
+            
+            items.forEach(item => {
+                const playerName = item.getAttribute('data-name');
+                if (playerName.includes(search)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // 踢出玩家
+        function kickPlayer(playerName, playerId) {
+            if (!confirm(`确定要踢出玩家 ${playerName} 吗？`)) return;
+            
+            const kickParams = {
+                message: "您已被管理员踢出服务器",
+                player: [{ 
+                    name: playerName, 
+                    id: playerId 
+                }]
+            };
+            
+            addLog(`🔄 正在踢出玩家: ${playerName}`, 'info');
+            
+            sendRequest('players/kick', [kickParams])
+            .then((kickedPlayers) => {
+                if (kickedPlayers && kickedPlayers.length > 0) {
+                    addLog(`✅ 已成功踢出玩家: ${playerName}`, 'success');
+                } else {
+                    addLog(`⚠️ 玩家 ${playerName} 可能不在线`, 'warning');
+                }
+                // 立即刷新玩家列表
+                setTimeout(() => getPlayers(), 1000);
+            })
+            .catch(error => {
+                let errorMsg = error.message;
+                if (error.code === -32602) {
+                    errorMsg = "参数格式错误";
+                } else if (error.code === -32601) {
+                    errorMsg = "方法不存在";
+                }
+                addLog(`❌ 踢出玩家失败: ${playerName} - ${errorMsg}`, 'error');
+            });
+        }
+
+        // 保存世界
+        function saveAll() {
+            sendRequest('server/save', [true])
+                .then(() => {
+                    addLog('世界已保存', 'success');
+                })
+                .catch(error => {
+                    addLog('保存世界失败: ' + error.message, 'error');
+                });
+        }
+
+        // 停止服务器
+        function stopServer() {
+            if (!confirm('确定要停止服务器吗？这将断开所有玩家连接！')) return;
+            
+            sendRequest('server/stop', [])
+                .then(() => {
+                    addLog('服务器正在关闭...', 'warning');
+                    // 停止后延迟检查状态
+                    setTimeout(() => {
+                        checkServerStatus();
+                        checkRconStatus();
+                    }, 3000);
+                })
+                .catch(error => {
+                    addLog('停止服务器失败: ' + error.message, 'error');
+                });
+        }
+
+        // 清空日志
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            addLog('日志已清空', 'info');
+        }
+
+        // 清空事件
+        function clearEvents() {
+            document.getElementById('eventsContainer').innerHTML = '<div class="empty-state">服务器事件将在这里显示</div>';
+        }
+
+        // 标签页切换
+        function switchTab(tabName) {
+            // 隐藏所有标签内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 取消所有标签激活状态
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 激活选中的标签
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 白名单功能
+        function getWhitelistStatus() {
+            sendRequest('serversettings/use_allowlist', [])
+                .then(result => {
+                    whitelistEnabled = result;
+                    updateWhitelistStatusDisplay();
+                    addLog(`白名单状态: ${whitelistEnabled ? '已启用' : '已禁用'}`, 'success');
+                })
+                .catch(error => {
+                    addLog('获取白名单状态失败: ' + error.message, 'error');
+                });
+        }
+
+        function updateWhitelistStatusDisplay() {
+            const indicator = document.getElementById('whitelistStatusIndicator');
+            const statusText = document.getElementById('whitelistStatusText');
+            const enableBtn = document.getElementById('enableWhitelistBtn');
+            const disableBtn = document.getElementById('disableWhitelistBtn');
+            
+            if (whitelistEnabled) {
+                indicator.className = 'status-indicator on';
+                statusText.textContent = '白名单已启用';
+                enableBtn.disabled = true;
+                disableBtn.disabled = false;
+                enableBtn.innerHTML = '✅ 已启用';
+                disableBtn.innerHTML = '❌ 关闭白名单';
+            } else {
+                indicator.className = 'status-indicator off';
+                statusText.textContent = '白名单已禁用';
+                enableBtn.disabled = false;
+                disableBtn.disabled = true;
+                enableBtn.innerHTML = '✅ 启用白名单';
+                disableBtn.innerHTML = '❌ 已关闭';
+            }
+        }
+
+        function toggleWhitelist(enable) {
+            sendRequest('serversettings/use_allowlist/set', [enable])
+                .then(() => {
+                    whitelistEnabled = enable;
+                    updateWhitelistStatusDisplay();
+                    addLog(`白名单已${enable ? '启用' : '关闭'}`, 'success');
+                })
+                .catch(error => {
+                    addLog(`${enable ? '启用' : '关闭'}白名单失败: ${error.message}`, 'error');
+                });
+        }
+
+        function getWhitelist() {
+            sendRequest('allowlist', [])
+                .then(whitelist => {
+                    displayWhitelist(whitelist);
+                    addLog(`获取到 ${whitelist.length} 个白名单玩家`, 'success');
+                })
+                .catch(error => {
+                    addLog('获取白名单失败: ' + error.message, 'error');
+                });
+        }
+
+        function displayWhitelist(whitelist) {
+            const container = document.getElementById('whitelistContainer');
+            
+            if (!whitelist || whitelist.length === 0) {
+                container.innerHTML = '<div class="empty-state">白名单为空</div>';
+                return;
+            }
+            
+            container.innerHTML = whitelist.map(player => `
+                <div class="compact-player-item" data-name="${player.name.toLowerCase()}">
+                    <div class="compact-player-info">
+                        <div class="compact-player-name">✓ ${player.name}</div>
+                        <div class="compact-player-uuid">${player.id}</div>
+                    </div>
+                    <div class="compact-player-actions">
+                        <button class="btn btn-danger btn-small" onclick="removeFromWhitelist('${player.name}', '${player.id}')">移除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addToWhitelist() {
+            const playerName = document.getElementById('addWhitelistPlayer').value.trim();
+            if (!playerName) {
+                alert('请输入玩家名称');
+                return;
+            }
+            
+            sendRequest('allowlist/add', [[{ name: playerName }]])
+                .then(() => {
+                    addLog(`已将 ${playerName} 添加到白名单`, 'success');
+                    document.getElementById('addWhitelistPlayer').value = '';
+                    getWhitelist();
+                })
+                .catch(error => {
+                    addLog(`添加白名单失败: ${playerName} - ${error.message}`, 'error');
+                });
+        }
+
+        function removeFromWhitelist(playerName, playerId) {
+            if (!confirm(`确定要从白名单移除 ${playerName} 吗？`)) return;
+            
+            sendRequest('allowlist/remove', [[{ name: playerName, id: playerId }]])
+                .then(() => {
+                    addLog(`已从白名单移除: ${playerName}`, 'success');
+                    getWhitelist();
+                })
+                .catch(error => {
+                    addLog(`移除白名单失败: ${playerName} - ${error.message}`, 'error');
+                });
+        }
+
+        function filterWhitelist() {
+            const search = document.getElementById('whitelistSearch').value.toLowerCase();
+            const items = document.querySelectorAll('#whitelistContainer .compact-player-item');
+            
+            items.forEach(item => {
+                const playerName = item.getAttribute('data-name');
+                if (playerName.includes(search)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // 封禁管理功能
+        function getBans() {
+            sendRequest('bans', [])
+                .then(bans => {
+                    displayBans(bans);
+                    addLog(`获取到 ${bans.length} 个玩家封禁`, 'success');
+                })
+                .catch(error => {
+                    addLog('获取封禁列表失败: ' + error.message, 'error');
+                });
+        }
+
+        function getIPBans() {
+            sendRequest('ip_bans', [])
+                .then(ipBans => {
+                    displayIPBans(ipBans);
+                    addLog(`获取到 ${ipBans.length} 个IP封禁`, 'success');
+                })
+                .catch(error => {
+                    addLog('获取IP封禁列表失败: ' + error.message, 'error');
+                });
+        }
+
+        function displayBans(bans) {
+            const container = document.getElementById('bansContainer');
+            
+            if (!bans || bans.length === 0) {
+                container.innerHTML = '<div class="empty-state">玩家封禁列表为空</div>';
+                return;
+            }
+            
+            const bansHTML = bans.map(ban => `
+                <div class="compact-player-item" data-name="${ban.player.name.toLowerCase()}">
+                    <div class="compact-player-info">
+                        <div class="compact-player-name">🚫 ${ban.player.name}</div>
+                        <div class="compact-player-uuid">${ban.player.id}</div>
+                        ${ban.reason ? `<div style="color: var(--danger); font-size: 0.7rem; margin-top: 2px;">原因: ${ban.reason}</div>` : ''}
+                        ${ban.source ? `<div style="color: #888; font-size: 0.6rem; margin-top: 1px;">操作者: ${ban.source}</div>` : ''}
+                    </div>
+                    <div class="compact-player-actions">
+                        <button class="btn btn-success btn-small" onclick="unbanPlayer('${ban.player.name}', '${ban.player.id}')">解封</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = '<h4 style="margin-bottom: 10px; color: var(--dark);">玩家封禁列表</h4>' + bansHTML;
+        }
+
+        function displayIPBans(ipBans) {
+            const container = document.getElementById('bansContainer');
+            let existingContent = container.innerHTML;
+            
+            if (!ipBans || ipBans.length === 0) {
+                container.innerHTML = existingContent + '<h4 style="margin-top: 15px; color: var(--dark);">IP封禁列表</h4><div class="empty-state">IP封禁列表为空</div>';
+                return;
+            }
+            
+            const ipBansHTML = ipBans.map(ban => `
+                <div class="compact-player-item" data-ip="${ban.ip}">
+                    <div class="compact-player-info">
+                        <div class="compact-player-name">🌐 ${ban.ip}</div>
+                        ${ban.reason ? `<div style="color: var(--danger); font-size: 0.7rem; margin-top: 2px;">原因: ${ban.reason}</div>` : ''}
+                        ${ban.source ? `<div style="color: #888; font-size: 0.6rem; margin-top: 1px;">操作者: ${ban.source}</div>` : ''}
+                    </div>
+                    <div class="compact-player-actions">
+                        <button class="btn btn-success btn-small" onclick="unbanIP('${ban.ip}')">解封</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = existingContent + '<h4 style="margin-top: 15px; color: var(--dark);">IP封禁列表</h4>' + ipBansHTML;
+        }
+
+        function banPlayer() {
+            const playerName = document.getElementById('banPlayerName').value.trim();
+            const reason = document.getElementById('banReason').value.trim();
+            
+            if (!playerName) {
+                alert('请输入玩家名称');
+                return;
+            }
+            
+            if (!confirm(`确定要封禁玩家 ${playerName} 吗？`)) return;
+            
+            sendRequest('bans/add', [[{
+                player: { name: playerName },
+                reason: reason || "违反服务器规则",
+                source: "管理面板"
+            }]])
+                .then(() => {
+                    addLog(`已封禁玩家: ${playerName}`, 'success');
+                    document.getElementById('banPlayerName').value = '';
+                    document.getElementById('banReason').value = '';
+                    getBans();
+                })
+                .catch(error => {
+                    addLog(`封禁玩家失败: ${playerName} - ${error.message}`, 'error');
+                });
+        }
+
+        function banIP() {
+            const ip = document.getElementById('banIP').value.trim();
+            const reason = document.getElementById('banIPReason').value.trim();
+            
+            if (!ip) {
+                alert('请输入IP地址');
+                return;
+            }
+            
+            if (!confirm(`确定要封禁IP ${ip} 吗？`)) return;
+            
+            sendRequest('ip_bans/add', [[{
+                ip: ip,
+                reason: reason || "违反服务器规则",
+                source: "管理面板"
+            }]])
+                .then(() => {
+                    addLog(`已封禁IP: ${ip}`, 'success');
+                    document.getElementById('banIP').value = '';
+                    document.getElementById('banIPReason').value = '';
+                    getIPBans();
+                })
+                .catch(error => {
+                    addLog(`封禁IP失败: ${ip} - ${error.message}`, 'error');
+                });
+        }
+
+        function unbanPlayer(playerName, playerId) {
+            if (!confirm(`确定要解封 ${playerName} 吗？`)) return;
+            
+            sendRequest('bans/remove', [[{ name: playerName, id: playerId }]])
+                .then(() => {
+                    addLog(`已解封玩家: ${playerName}`, 'success');
+                    getBans();
+                })
+                .catch(error => {
+                    addLog(`解封玩家失败: ${playerName} - ${error.message}`, 'error');
+                });
+        }
+
+        function unbanIP(ip) {
+            if (!confirm(`确定要解封IP ${ip} 吗？`)) return;
+            
+            sendRequest('ip_bans/remove', [[ip]])
+                .then(() => {
+                    addLog(`已解封IP: ${ip}`, 'success');
+                    getIPBans();
+                })
+                .catch(error => {
+                    addLog(`解封IP失败: ${ip} - ${error.message}`, 'error');
+                });
+        }
+
+        function filterBans() {
+            const search = document.getElementById('bansSearch').value.toLowerCase();
+            const items = document.querySelectorAll('#bansContainer .compact-player-item');
+            
+            items.forEach(item => {
+                const name = item.getAttribute('data-name');
+                const ip = item.getAttribute('data-ip');
+                const searchText = (name || ip || '').toLowerCase();
+                
+                if (searchText.includes(search)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // 管理员管理功能
+        function getAdmins() {
+            sendRequest('operators', [])
+                .then(admins => {
+                    displayAdmins(admins);
+                    addLog(`获取到 ${admins.length} 名管理员`, 'success');
+                })
+                .catch(error => {
+                    addLog('获取管理员列表失败: ' + error.message, 'error');
+                });
+        }
+
+        function displayAdmins(admins) {
+            const container = document.getElementById('adminsContainer');
+            
+            if (!admins || admins.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无管理员</div>';
+                return;
+            }
+            
+            container.innerHTML = admins.map(admin => `
+                <div class="compact-player-item" data-name="${admin.player.name.toLowerCase()}">
+                    <div class="compact-player-info">
+                        <div class="compact-player-name">👑 ${admin.player.name}</div>
+                        <div class="compact-player-uuid">${admin.player.id}</div>
+                        <div style="color: #666; font-size: 0.7rem;">权限等级: ${admin.permissionLevel}</div>
+                    </div>
+                    <div class="compact-player-actions">
+                        <button class="btn btn-danger btn-small" onclick="removeAdmin('${admin.player.name}', '${admin.player.id}')">移除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addAdmin() {
+            const playerName = document.getElementById('addAdminPlayer').value.trim();
+            const level = parseInt(document.getElementById('adminLevel').value);
+            
+            if (!playerName) {
+                alert('请输入玩家名称');
+                return;
+            }
+            
+            if (isNaN(level) || level < 0 || level > 4) {
+                alert('请输入有效的权限等级 (0-4)');
+                return;
+            }
+            
+            sendRequest('operators/add', [[{
+                player: { name: playerName },
+                permissionLevel: level,
+                bypassesPlayerLimit: true
+            }]])
+                .then(() => {
+                    addLog(`已将 ${playerName} 设置为管理员`, 'success');
+                    document.getElementById('addAdminPlayer').value = '';
+                    getAdmins();
+                })
+                .catch(error => {
+                    addLog(`设置管理员失败: ${playerName} - ${error.message}`, 'error');
+                });
+        }
+
+        function removeAdmin(playerName, playerId) {
+            if (!confirm(`确定要移除管理员 ${playerName} 吗？`)) return;
+            
+            sendRequest('operators/remove', [[{ name: playerName, id: playerId }]])
+                .then(() => {
+                    addLog(`已移除管理员: ${playerName}`, 'success');
+                    getAdmins();
+                })
+                .catch(error => {
+                    addLog(`移除管理员失败: ${playerName} - ${error.message}`, 'error');
+                });
+        }
+
+        function filterAdmins() {
+            const search = document.getElementById('adminsSearch').value.toLowerCase();
+            const items = document.querySelectorAll('#adminsContainer .compact-player-item');
+            
+            items.forEach(item => {
+                const playerName = item.getAttribute('data-name');
+                if (playerName.includes(search)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // 游戏规则管理功能
+        function getGameRules() {
+            sendRequest('gamerules', [])
+                .then(result => {
+                    currentRules = result;
+                    displayGameRules(result);
+                    addLog(`✅ 获取到 ${result.length} 条游戏规则`, 'success');
+                })
+                .catch((error) => {
+                    addLog('❌ 获取游戏规则失败: ' + error.message, 'error');
+                    displayGameRules([]);
+                });
+        }
+
+        function displayGameRules(gamerules) {
+            const container = document.getElementById('gameRulesList');
+            
+            if (gamerules.length === 0) {
+                container.innerHTML = '<div class="empty-state">没有游戏规则</div>';
+                return;
+            }
+
+            // 按分类分组
+            const categorizedRules = {};
+            gamerules.forEach(rule => {
+                const category = ruleCategories[rule.key] || 'other';
+                if (!categorizedRules[category]) {
+                    categorizedRules[category] = [];
+                }
+                categorizedRules[category].push(rule);
+            });
+
+            let html = '';
+            
+            // 显示各个分类
+            const categoryOrder = ['gameplay', 'world', 'player', 'mob', 'chat', 'other'];
+            categoryOrder.forEach(category => {
+                if (categorizedRules[category]) {
+                    const categoryName = {
+                        'gameplay': '🎮 游戏玩法',
+                        'world': '🌍 世界设置',
+                        'player': '👤 玩家相关',
+                        'mob': '🐾 生物相关',
+                        'chat': '💬 聊天相关',
+                        'other': '📦 其他规则'
+                    }[category];
+                    
+                    html += `<div class="gamerule-category">
+                        <h3>${categoryName}</h3>
+                        ${categorizedRules[category].map(rule => createRuleHTML(rule)).join('')}
+                    </div>`;
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function createRuleHTML(rule) {
+            const description = ruleDescriptions[rule.key] || '暂无描述';
+            const valueType = detectValueType(rule.value);
+            const category = ruleCategories[rule.key] || 'other';
+            
+            return `
+                <div class="gamerule-item" data-type="${valueType}" data-category="${category}" data-name="${rule.key.toLowerCase()}">
+                    <div class="gamerule-info">
+                        <div class="gamerule-name">
+                            ${rule.key}
+                            <span class="gamerule-type ${valueType}">${getTypeName(valueType)}</span>
+                        </div>
+                        <div class="gamerule-description">${description}</div>
+                    </div>
+                    <div class="gamerule-controls">
+                        ${createRuleControl(rule, valueType)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function createRuleControl(rule, valueType) {
+            const ruleId = `rule_${rule.key.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            
+            // 统一处理布尔值，无论原始类型是什么
+            const isBooleanValue = valueType === 'boolean';
+            const boolValue = isBooleanValue ? 
+                (typeof rule.value === 'boolean' ? rule.value : rule.value === 'true') : 
+                false;
+            
+            if (isBooleanValue) {
+                return `
+                    <span class="gamerule-value ${boolValue}">${boolValue ? '开启' : '关闭'}</span>
+                    <button class="gamerule-btn toggle ${boolValue ? '' : 'off'}" 
+                            onclick="toggleRule('${rule.key}', ${!boolValue})">
+                        ${boolValue ? '开' : '关'}
+                    </button>
+                `;
+            }
+            
+            switch (valueType) {
+                case 'number':
+                    return `
+                        <input type="number" class="number-input" id="${ruleId}" value="${rule.value}" 
+                               onchange="updateRuleValue('${rule.key}', this.value)">
+                        <button class="gamerule-btn apply" onclick="applyRule('${rule.key}')">✅ 应用</button>
+                        <button class="gamerule-btn reset" onclick="resetRule('${rule.key}')">🔄 重置</button>
+                    `;
+                
+                case 'string':
+                    return `
+                        <input type="text" class="text-input" id="${ruleId}" value="${rule.value}" 
+                               onchange="updateRuleValue('${rule.key}', this.value)">
+                        <button class="gamerule-btn apply" onclick="applyRule('${rule.key}')">✅ 应用</button>
+                        <button class="gamerule-btn reset" onclick="resetRule('${rule.key}')">🔄 重置</button>
+                    `;
+                
+                default:
+                    return `
+                        <span class="gamerule-value">${rule.value}</span>
+                    `;
+            }
+        }
+
+        function detectValueType(value) {
+            // 首先检查是否是布尔值（包括字符串形式的布尔值）
+            if (typeof value === 'boolean') return 'boolean';
+            if (value === 'true' || value === 'false') return 'boolean';
+            
+            // 然后检查是否是数字
+            if (typeof value === 'number') return 'number';
+            if (!isNaN(value) && value.toString().trim() !== '') return 'number';
+            
+            // 默认为字符串
+            return 'string';
+        }
+
+        function getTypeName(type) {
+            return {
+                'boolean': '布尔',
+                'number': '数字',
+                'string': '文本'
+            }[type];
+        }
+
+        // 规则操作函数
+        function toggleRule(ruleKey, newValue) {
+            addLog(`🔄 切换规则 ${ruleKey}: ${newValue ? '开启' : '关闭'}`, 'info');
+            
+            // 服务器需要字符串形式的布尔值
+            const stringValue = newValue ? "true" : "false";
+            
+            // 直接发送请求更新规则
+            sendRequest('gamerules/update', [{ key: ruleKey, value: stringValue }])
+                .then(() => {
+                    addLog(`✅ 游戏规则已更新: ${ruleKey} = ${stringValue}`, 'success');
+                    // 立即更新界面显示
+                    updateRuleDisplay(ruleKey, newValue);
+                })
+                .catch((error) => {
+                    addLog(`❌ 更新游戏规则失败: ${ruleKey} - ${error.message}`, 'error');
+                    // 恢复原值
+                    getGameRules();
+                });
+        }
+
+        function updateRuleDisplay(ruleKey, newValue) {
+            const ruleItem = document.querySelector(`[data-name="${ruleKey.toLowerCase()}"]`);
+            if (ruleItem) {
+                const valueElement = ruleItem.querySelector('.gamerule-value');
+                const toggleButton = ruleItem.querySelector('.gamerule-btn.toggle');
+                
+                if (valueElement) {
+                    valueElement.textContent = newValue ? '开启' : '关闭';
+                    valueElement.className = `gamerule-value ${newValue}`;
+                }
+                
+                if (toggleButton) {
+                    toggleButton.textContent = newValue ? '开' : '关';
+                    toggleButton.className = `gamerule-btn toggle ${newValue ? '' : 'off'}`;
+                    // 更新点击事件，使用新的值
+                    toggleButton.setAttribute('onclick', `toggleRule('${ruleKey}', ${!newValue})`);
+                }
+            }
+        }
+
+        function updateRuleValue(ruleKey, newValue) {
+            addLog(`📝 更新规则 ${ruleKey}: ${newValue}`, 'info');
+        }
+
+        function applyRule(ruleKey) {
+            const ruleId = `rule_${ruleKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const inputElement = document.getElementById(ruleId);
+            let newValue;
+
+            if (inputElement.type === 'checkbox') {
+                newValue = inputElement.checked;
+            } else {
+                newValue = inputElement.value;
+                // 尝试转换为数字
+                if (!isNaN(newValue) && newValue.trim() !== '') {
+                    newValue = Number(newValue);
+                }
+            }
+
+            // 对于布尔类型的规则，需要转换为字符串
+            const ruleItem = document.querySelector(`[data-name="${ruleKey.toLowerCase()}"]`);
+            if (ruleItem && ruleItem.getAttribute('data-type') === 'boolean') {
+                newValue = newValue ? "true" : "false";
+            } else if (ruleItem && ruleItem.getAttribute('data-type') === 'number') {
+                // 对于数字类型的规则，确保传递字符串而不是数字
+                newValue = newValue.toString();
+            }
+
+            sendRequest('gamerules/update', [{ key: ruleKey, value: newValue }])
+                .then(() => {
+                    addLog(`✅ 游戏规则已更新: ${ruleKey} = ${newValue}`, 'success');
+                    // 重新加载以确认更新
+                    setTimeout(() => getGameRules(), 500);
+                })
+                .catch((error) => {
+                    addLog(`❌ 更新游戏规则失败: ${ruleKey} - ${error.message}`, 'error');
+                    // 恢复原值
+                    getGameRules();
+                });
+        }
+
+        function resetRule(ruleKey) {
+            const defaultValue = defaultValues[ruleKey];
+            if (defaultValue !== undefined) {
+                sendRequest('gamerules/update', [{ key: ruleKey, value: defaultValue }])
+                    .then(() => {
+                        addLog(`✅ 规则已重置: ${ruleKey} = ${defaultValue}`, 'success');
+                        setTimeout(() => getGameRules(), 500);
+                    })
+                    .catch((error) => {
+                        addLog(`❌ 重置规则失败: ${ruleKey} - ${error.message}`, 'error');
+                    });
+            } else {
+                addLog(`⚠️ 未知规则的默认值: ${ruleKey}`, 'warning');
+            }
+        }
+
+        function resetAllRules() {
+            if (confirm('确定要重置所有游戏规则为默认值吗？')) {
+                addLog('🔄 正在重置所有游戏规则...', 'info');
+                
+                // 获取当前规则然后重置
+                sendRequest('gamerules', [])
+                    .then(rules => {
+                        let resetPromises = [];
+                        rules.forEach(rule => {
+                            const defaultValue = defaultValues[rule.key];
+                            if (defaultValue !== undefined && rule.value !== defaultValue) {
+                                resetPromises.push(
+                                    sendRequest('gamerules/update', [{ key: rule.key, value: defaultValue }])
+                                );
+                            }
+                        });
+                        
+                        return Promise.allSettled(resetPromises);
+                    })
+                    .then(results => {
+                        const successful = results.filter(r => r.status === 'fulfilled').length;
+                        const failed = results.filter(r => r.status === 'rejected').length;
+                        
+                        addLog(`✅ 重置完成: ${successful} 条规则成功, ${failed} 条规则失败`, 'success');
+                        getGameRules();
+                    })
+                    .catch(error => {
+                        addLog(`❌ 重置过程出错: ${error.message}`, 'error');
+                    });
+            }
+        }
+
+        // 筛选功能
+        function filterRules() {
+            const searchTerm = document.getElementById('ruleSearch').value.toLowerCase();
+            const categoryFilter = document.getElementById('ruleCategoryFilter').value;
+            
+            const rules = document.querySelectorAll('.gamerule-item');
+            
+            rules.forEach(rule => {
+                const ruleName = rule.getAttribute('data-name');
+                const ruleCategory = rule.getAttribute('data-category');
+                
+                const matchesSearch = ruleName.includes(searchTerm);
+                const matchesCategory = categoryFilter === 'all' || ruleCategory === categoryFilter;
+                
+                if (matchesSearch && matchesCategory) {
+                    rule.style.display = 'flex';
+                } else {
+                    rule.style.display = 'none';
+                }
+            });
+        }
+
+        // 检查服务器状态
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/api/server/status', {
+                    headers: {
+                        'X-Session-ID': sessionId
+                    }
+                });
+                
+                const result = await response.json();
+                serverRunning = result.running;
+                
+                const indicator = document.getElementById('serverStatusIndicator');
+                const statusText = document.getElementById('serverStatusText');
+                const startBtn = document.getElementById('startServerBtn');
+                const normalStopBtn = document.getElementById('normalStopBtn');
+                const forceStopBtn = document.getElementById('forceStopBtn');
+                
+                if (serverRunning) {
+                    indicator.className = 'server-indicator on';
+                    statusText.textContent = '服务器状态: 运行中';
+                    startBtn.disabled = true;
+                    normalStopBtn.disabled = false;
+                    forceStopBtn.disabled = false;
+                    startBtn.innerHTML = '🚀 运行中';
+                    normalStopBtn.innerHTML = '🛑 停止服务器';
+                    forceStopBtn.innerHTML = '⛔ 强制停止';
+                } else {
+                    indicator.className = 'server-indicator off';
+                    statusText.textContent = '服务器状态: 已停止';
+                    startBtn.disabled = false;
+                    normalStopBtn.disabled = true;
+                    forceStopBtn.disabled = true;
+                    startBtn.innerHTML = '🚀 启动服务器';
+                    normalStopBtn.innerHTML = '🛑 已停止';
+                    forceStopBtn.innerHTML = '⛔ 强制停止';
+                    
+                    // 服务器停止时更新 RCON 状态
+                    rconEnabled = false;
+                    updateRconStatusDisplay();
+                }
+            } catch (error) {
+                console.error('检查服务器状态失败:', error);
+                // 如果检查失败，假设服务器已停止
+                serverRunning = false;
+                updateServerStatusDisplay(false);
+            }
+        }
+
+        // 更新服务器状态显示
+        function updateServerStatusDisplay(isRunning) {
+            const indicator = document.getElementById('serverStatusIndicator');
+            const statusText = document.getElementById('serverStatusText');
+            const startBtn = document.getElementById('startServerBtn');
+            const normalStopBtn = document.getElementById('normalStopBtn');
+            const forceStopBtn = document.getElementById('forceStopBtn');
+            
+            if (isRunning) {
+                indicator.className = 'server-indicator on';
+                statusText.textContent = '服务器状态: 运行中';
+                startBtn.disabled = true;
+                normalStopBtn.disabled = false;
+                forceStopBtn.disabled = false;
+                startBtn.innerHTML = '🚀 运行中';
+                normalStopBtn.innerHTML = '🛑 停止服务器';
+                forceStopBtn.innerHTML = '⛔ 强制停止';
+            } else {
+                indicator.className = 'server-indicator off';
+                statusText.textContent = '服务器状态: 已停止';
+                startBtn.disabled = false;
+                normalStopBtn.disabled = true;
+                forceStopBtn.disabled = true;
+                startBtn.innerHTML = '🚀 启动服务器';
+                normalStopBtn.innerHTML = '🛑 已停止';
+                forceStopBtn.innerHTML = '⛔ 强制停止';
+            }
+        }
+
+        // 启动服务器
+        async function startServer() {
+            if (!confirm('确定要启动 Minecraft 服务器吗？')) return;
+            
+            addLog('🔄 正在启动服务器...', 'info');
+            
+            try {
+                const response = await fetch('/api/server/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLog(`✅ ${result.message}`, 'success');
+                    // 启动后延迟检查状态
+                    setTimeout(() => {
+                        checkServerStatus();
+                    }, 5000);
+                } else {
+                    addLog(`❌ ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addLog(`❌ 启动服务器失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 强制停止服务器
+        async function forceStopServer() {
+            if (!confirm('确定要强制停止服务器吗？这可能会造成数据丢失！')) return;
+            
+            addLog('🛑 正在强制停止服务器...', 'warning');
+            
+            try {
+                const response = await fetch('/api/server/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLog(`✅ ${result.message}`, 'success');
+                    // 强制停止后立即更新状态
+                    setTimeout(() => {
+                        checkServerStatus();
+                        checkRconStatus();
+                        // 断开 WebSocket 连接
+                        if (ws) {
+                            disconnect();
+                        }
+                    }, 2000);
+                } else {
+                    addLog(`❌ ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addLog(`❌ 停止服务器失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否有保存的会话
+            const savedSession = localStorage.getItem('mc_session');
+            if (savedSession) {
+                sessionId = savedSession;
+                // 验证会话有效性
+                checkSessionValidity();
+            }
+            
+            // 绑定回车键到登录
+            document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    login();
+                }
+            });
+            
+            // 设置默认值
+            document.getElementById('wsHost').value = '';
+            document.getElementById('wsPort').value = '';
+            
+            // 显示登录界面
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.getElementById('mainInterface').style.display = 'none';
+        });
+
+        // 检查会话有效性
+        async function checkSessionValidity() {
+            try {
+                const response = await fetch('/api/check', {
+                    headers: {
+                        'X-Session-ID': sessionId
+                    }
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    // 会话有效，直接显示管理界面
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('mainInterface').style.display = 'block';
+                    startStatusPolling();
+                    setTimeout(() => connect(), 500);
+                } else {
+                    // 会话无效，清除存储
+                    localStorage.removeItem('mc_session');
+                    sessionId = null;
+                }
+            } catch (error) {
+                console.error('会话检查失败:', error);
+                localStorage.removeItem('mc_session');
+                sessionId = null;
+            }
+        }
+    </script>
+</body>
+</html>
